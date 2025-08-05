@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>វេបសាយកត់វត្តមាន</title>
+  <style>
+    @font-face {
+      font-family: 'Kantumruy Pro';
+      src: url('https://fonts.gstatic.com/ea/kantumruypro/v3/KantumruyPro-Regular.ttf') format('truetype');
+    }
+    body {
+      font-family: 'Kantumruy Pro', Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+      text-align: center;
+      margin: 0;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 1.8rem;
+    }
+    #dateWrapper {
+      margin-bottom: 20px;
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #555;
+    }
+    #savedRecords {
+      margin-top: 30px;
+      text-align: left;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      font-size: 14px;
+      color: #333;
+      overflow-x: auto;
+    }
+    #savedRecords h2 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #4CAF50;
+      font-size: 1.3rem;
+    }
+    #savedRecords pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    table {
+      width: 90%;
+      margin: 0 auto 20px auto;
+      border-collapse: collapse;
+      background: #fff;
+      table-layout: fixed;
+      word-wrap: break-word;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 1rem;
+    }
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+    select {
+      padding: 5px;
+      font-family: 'Kantumruy Pro', Arial, sans-serif;
+      font-weight: bold;
+      font-size: 1rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    tr.present {
+      background-color: #d4edda;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Kantumruy Pro', Arial, sans-serif;
+      font-size: 1rem;
+      margin: 5px;
+      cursor: pointer;
+      min-width: 120px;
+    }
+    button#sendAll {
+      background: #0088cc;
+      color: white;
+    }
+    button#sendAll:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    button#clearAll {
+      background: #cc3300;
+      color: white;
+    }
+    @media screen and (max-width: 600px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      #dateWrapper {
+        font-size: 1rem;
+      }
+      table {
+        width: 100%;
+      }
+      th, td {
+        padding: 6px 5px;
+        font-size: 0.9rem;
+      }
+      button {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+        min-width: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>កត់វត្តមាន</h1>
+
+  <div id="dateWrapper">
+    កាលបរិច្ឆេទ: 
+    <input type="date" id="dateInput" />
+  </div>
+
+  <table id="attendanceTable">
+    <thead>
+      <tr>
+        <th>លេខរៀង</th>
+        <th>ឈ្មោះ</th>
+        <th>វត្តមាន</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- តារាងវត្តមាន -->
+    </tbody>
+  </table>
+
+  <div>
+    <button id="sendAll" disabled>ផ្ញើ Telegram សរុប</button>
+    <button id="clearAll">Clear វត្តមាន</button>
+  </div>
+
+  <div id="savedRecords">
+    <h2>ទិន្នន័យវត្តមានដែលបានរក្សាទុក</h2>
+    <pre id="recordsContent">មិនមានទិន្នន័យទេ</pre>
+  </div>
+
+<script>
+  const khmerMonths = [
+    "មករា", "កុម្ភៈ", "មិនា", "មេសា", "ឧសភា", "មិថុនា",
+    "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"
+  ];
+
+  function formatDateToKhmer(dateStr) {
+    if (!dateStr) return "មិនមានកាលបរិច្ឆេទ";
+    const [year, month, day] = dateStr.split("-");
+    const m = parseInt(month, 10) - 1;
+    return `ថ្ងៃទី ${parseInt(day, 10)} ខែ${khmerMonths[m]} ឆ្នាំ ${year}`;
+  }
+
+  function setDefaultDate() {
+    const input = document.getElementById("dateInput");
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    input.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  setDefaultDate();
+
+  const names = [
+    "KOTH RAKSA", "KEO TIRIDA", "KONG VISAL", "KRUY DEVIT", "NGAN CHHAYLING",
+    "CHOK CHANVATHANAK", "CHANNY SREYNOCH", "CHAN SINATSUSU", "CHHENG MINEA", "CHHORN PICH",
+    "CHIM DEVIT", "NARITH VONGVATHANY", "NOB PHALIEK", "THAV DANETH", "THY MENG EII",
+    "NOEUN CHAMMAN", "NOV UDOM", "BO CHAN OUDOMNY", "BUEN BARAVIT", "PECH POLIN",
+    "PHAT PHEARUN", "PHON LYHOUR", "PHOEUN SOKPISEY", "YERN BUNYEAN", "RORN SOTHEA",
+    "RA SOVANPANHA", "REN CHANTHOU", "VANNA RAM", "VA MENGHONG", "SOY CHOMREAN",
+    "SAN VIRAKBOTH", "SOK KIMHOUT", "SOK TEPSEYLA", "SENG THEALINH", "SENG SITHLIPO",
+    "SAO VISAL", "SIM TITMAROTH", "HOURTH SOKUN", "HOEUN LEANGHAK", "HENG MENGOUN",
+    "HENG SOVANCHANHESDA", "HORN LIHEA", "HUN NEKA", "HOUM CHANNA", "HAL SOKHY",
+    "ART SOKLIN", "ANN SOCHEA", "ANN CHENDA", "ON SIREYVATHANAK", "OL PHALLIN",
+    "EN CHANTHET"
+  ];
+
+  const tbody = document.querySelector("#attendanceTable tbody");
+  const sendAllBtn = document.getElementById("sendAll");
+  const clearAllBtn = document.getElementById("clearAll");
+  const dateInput = document.getElementById("dateInput");
+  const recordsContent = document.getElementById("recordsContent");
+
+  function loadAllRecords() {
+    const data = localStorage.getItem("allAttendanceRecords");
+    if (!data) return {};
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  }
+
+  function saveRecord(dateStr, attendanceData) {
+    const allRecords = loadAllRecords();
+    allRecords[dateStr] = attendanceData;
+    localStorage.setItem("allAttendanceRecords", JSON.stringify(allRecords));
+    displayRecords();
+  }
+
+  function displayRecords() {
+    const allRecords = loadAllRecords();
+    if (Object.keys(allRecords).length === 0) {
+      recordsContent.textContent = "មិនមានទិន្នន័យទេ";
+      return;
+    }
+    let text = "";
+    for (const [date, data] of Object.entries(allRecords)) {
+      text += `កាលបរិច្ឆេទ: ${formatDateToKhmer(date)}\n`;
+      for (const [name, status] of Object.entries(data)) {
+        text += `  - ${name}: ${status}\n`;
+      }
+      text += "\n";
+    }
+    recordsContent.textContent = text;
+  }
+
+  function checkAllSelected() {
+    const selects = tbody.querySelectorAll("select");
+    for (const sel of selects) {
+      if (sel.value === "") return false;
+    }
+    return true;
+  }
+
+  function buildTable(savedData = {}) {
+    tbody.innerHTML = "";
+
+    names.forEach((name, index) => {
+      const tr = document.createElement("tr");
+
+      const tdIndex = document.createElement("td");
+      tdIndex.textContent = index + 1;
+      tr.appendChild(tdIndex);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = name;
+      tr.appendChild(tdName);
+
+      const tdAttendance = document.createElement("td");
+      const select = document.createElement("select");
+      select.innerHTML = `
+        <option value="">-- ជ្រើសរើស --</option>
+        <option value="មក">មក</option>
+        <option value="មិនមក">មិនមក</option>
+      `;
+
+      if (savedData[name]) {
+        select.value = savedData[name];
+        if (select.value === "មក") {
+          tr.classList.add("present");
+        }
+      }
+
+      select.addEventListener("change", () => {
+        if (select.value === "មក") {
+          tr.classList.add("present");
+        } else {
+          tr.classList.remove("present");
+        }
+
+        savedData[name] = select.value;
+        saveTempAttendance(dateInput.value, savedData);
+
+        sendAllBtn.disabled = !checkAllSelected();
+      });
+
+      tdAttendance.appendChild(select);
+      tr.appendChild(tdAttendance);
+
+      tbody.appendChild(tr);
+    });
+
+    sendAllBtn.disabled = !checkAllSelected();
+  }
+
+  function saveTempAttendance(dateStr, attendanceData) {
+    localStorage.setItem("tempAttendance:" + dateStr, JSON.stringify(attendanceData));
+  }
+
+  function loadTempAttendance(dateStr) {
+    const data = localStorage.getItem("tempAttendance:" + dateStr);
+    if (!data) return {};
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  }
+
+  dateInput.addEventListener("change", () => {
+    const attendanceForDate = loadTempAttendance(dateInput.value);
+    buildTable(attendanceForDate);
+  });
+
+  clearAllBtn.addEventListener("click", () => {
+    if (confirm("តើអ្នកប្រាកដចង់លុបវត្តមានសម្រាប់ថ្ងៃនេះមែនទេ?")) {
+      // លុប temp attendance សម្រាប់ថ្ងៃបច្ចុប្បន្ន
+      localStorage.removeItem("tempAttendance:" + dateInput.value);
+
+      // បង្កើតតារាងថ្មីទទេ
+      buildTable({});
+
+      // បិទប៊ូតុងផ្ញើ Telegram
+      sendAllBtn.disabled = true;
+    }
+  });
+
+  function init() {
+    displayRecords();
+    const attendanceForDate = loadTempAttendance(dateInput.value);
+    buildTable(attendanceForDate);
+  }
+
+  init();
+
+</script>
+</body>
+</html>
